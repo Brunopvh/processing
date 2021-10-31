@@ -15,4 +15,4 @@ Instalar o processing no Linux
    
    # Fotos
    
-![solarized selective contrast](https://github.com/Brunopvh/processing/raw/master/imgs/processing-py.png)
+![solarized selective contrast](https://raw.github.com/Brunopvh/processing/master/imgs/processing-py.png)
