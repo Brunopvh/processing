@@ -11,3 +11,8 @@ Instalar o processing no Linux
    cd processing && chmod +x processing.sh
    
    ./processing.sh -h
+   
+   
+   # Fotos
+   
+![solarized selective contrast](https://github.com/Brunopvh/processing/raw/master/imgs/processing-py.png)
