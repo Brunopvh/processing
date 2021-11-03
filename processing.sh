@@ -29,32 +29,36 @@
 #
 #======================================================================#
 #
+clear
+
+[[ $(id -u) == 0 ]] && {
+	echo -e "[ERRO] você não pode ser o 'root'. Para prosseguir EXECUTE sem sudo."
+	exit 1
+}
 
 
 __author__='Bruno Chaves'
-__version__=0.1.0
+__version__='0.1.2'
 __appname__='processing_installer'
 
 readonly __script__=$(readlink -f "$0")
 readonly app_dir=$(dirname "$__script__")
 #readonly URL_PROCESSING='https://github.com/processing/processing4/releases/download/processing-1276-4.0b1/processing-4.0b1-linux64.tgz'
-#readonly processing_version='4.0 - beta'
+#readonly processing_version='4.0-beta'
 readonly URL_PROCESSING='https://github.com/processing/processing/releases/download/processing-0270-3.5.4/processing-3.5.4-linux64.tgz'
 readonly processing_version='3.5.4'
 
-# Diretório destino para instalação /opt/processing
-readonly INSTALL_DIR='/opt/processing'
+
+# Diretório destino para instalação /opt/processing OU ~/.local/share
+#readonly INSTALL_DIR='/opt/processing'
+readonly INSTALL_DIR=~/.local/share/processing-"${processing_version}"
 readonly CACHE_DIR=~/.cache/"$__appname__" # Cache do Usuário.
 readonly CACHE_FILE="$CACHE_DIR/$(basename $URL_PROCESSING)" # Caminho completo do arquivo baixado.
 readonly tmp_dir=$(mktemp --directory) # Diretório para descompressão do arquivo. 
 readonly workdir=$(pwd)
 
-clear
 
-[[ $(id -u) == 0 ]] && {
-	echo -e "[ERRO] você não pode ser o 'root' para prosseguir EXECUTE $__script__"
-	exit 1
-}
+
 
 function print_line()
 {
@@ -95,7 +99,6 @@ function is_admin()
 
 function download_file()
 {
-	# Baixar o arquivo .tgz no diretório /tmp
 	
 	if [[ ! -x $(command -v wget) ]]; then
 		echo -e "Nescessário instalar o wget para prosseguir"
@@ -109,7 +112,6 @@ function download_file()
 	fi
 
 	echo -e "Baixando ... $CACHE_FILE"
-	sleep 1
 	wget "$URL_PROCESSING" -O "$CACHE_FILE"
 	return "$?"
 }
@@ -130,6 +132,7 @@ function check_shasum()
 	echo -e "\033[0;33mOK\033[m"
 	return 0
 }
+
 
 
 function unpack()
@@ -176,20 +179,41 @@ function uninstall_processing()
 		return 1
 	}
 
-	sudo rm -rf "$INSTALL_DIR"
+	echo -e "Executando ... $INSTALL_DIR/uninstall.sh"
+	if [[ ! -w "$INSTALL_DIR" ]]; then
+		sudo "${INSTALL_DIR}/uninstall.sh"
+		sudo rm -rf "$INSTALL_DIR"
+	else
+		"${INSTALL_DIR}/uninstall.sh"
+		rm -rf "$INSTALL_DIR"
+	fi
 }
+
 
 
 function install_processing()
 {
+
 	cd $tmp_dir
 	mv $(ls -d processing*) processing
+	cd ./processing
 	echo -e "Copiando processing para $INSTALL_DIR"
-	sudo cp -R -u processing "$INSTALL_DIR" 1> /dev/null
-	echo -e "Entrando no diretório ... $INSTALL_DIR"
-	cd "$INSTALL_DIR"
-	#sudo chmod +x install.sh
-	sudo ./install.sh
+	mkdir -p "$INSTALL_DIR"
+
+	[[ ! -d "$INSTALL_DIR" ]] && {
+		echo -e "(install_processing) ERRO ... diretório de instalação não encontrado."
+		return 1
+	}
+
+	if [[ ! -w "$INSTALL_DIR" ]]; then
+		sudo cp -R -u * "$INSTALL_DIR"/ 1> /dev/null
+		echo -e "Executando ... ${INSTALL_DIR}/install.sh"
+		sudo "${INSTALL_DIR}/install.sh"
+	else
+		cp -R -u * "$INSTALL_DIR"/ 1> /dev/null
+		echo -e "Executando ... ${INSTALL_DIR}/install.sh"
+		"${INSTALL_DIR}/install.sh"
+	fi
 }
 
 
@@ -202,6 +226,11 @@ function main()
 
 	is_admin || return 1
 	install_jdk || return 1	
+
+	[[ -d "$INSTALL_DIR" ]] && {
+		echo -e "Processing já instalado em ... $INSTALL_DIR"
+		return 0
+	}
 
 	mkdir -p "$CACHE_DIR"
 	download_file || return 1
