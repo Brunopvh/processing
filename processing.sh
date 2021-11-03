@@ -43,10 +43,16 @@ __appname__='processing_installer'
 
 readonly __script__=$(readlink -f "$0")
 readonly app_dir=$(dirname "$__script__")
-#readonly URL_PROCESSING='https://github.com/processing/processing4/releases/download/processing-1276-4.0b1/processing-4.0b1-linux64.tgz'
-#readonly processing_version='4.0-beta'
-readonly URL_PROCESSING='https://github.com/processing/processing/releases/download/processing-0270-3.5.4/processing-3.5.4-linux64.tgz'
-readonly processing_version='3.5.4'
+
+# Versão 4
+readonly URL_PROCESSING='https://github.com/processing/processing4/releases/download/processing-1276-4.0b1/processing-4.0b1-linux64.tgz'
+readonly processing_version='4.0-beta'
+readonly ORIGINAL_HASH='a489ac47a37d107366802180e2ca320afa97aa584ae1c8b4c6bee2405c78c86c'
+
+# Versão 3.
+#readonly URL_PROCESSING='https://github.com/processing/processing/releases/download/processing-0270-3.5.4/processing-3.5.4-linux64.tgz'
+#readonly processing_version='3.5.4'
+#readonly ORIGINAL_HASH='ded445069db3c6fc384fe4da89ca7aa7d0a4bd2536c5aa8de3fa4e115de3025b'
 
 
 # Diretório destino para instalação /opt/processing OU ~/.local/share
@@ -122,7 +128,6 @@ function check_shasum()
 	# Verificar a integridade do download com sha256sum.
 	echo -en "\033[0;32mV\033[merificando hash [sha256sum] do arquivo ... $CACHE_FILE "
 
-	local ORIGINAL_HASH='ded445069db3c6fc384fe4da89ca7aa7d0a4bd2536c5aa8de3fa4e115de3025b'
 	local pkg_hash=$(sha256sum "$CACHE_FILE" | cut -d ' ' -f 1)
 
 	if [[ "$ORIGINAL_HASH" != "$pkg_hash" ]]; then
@@ -219,27 +224,40 @@ function install_processing()
 
 function main()
 {
+
+	if [[ -z $1 ]]; then
+
+		[[ -d "$INSTALL_DIR" ]] && {
+			echo -e "Processing já instalado em ... $INSTALL_DIR"
+			return 0
+		}
+
+
+		is_admin || return 1
+		install_jdk || return 1			
+		mkdir -p "$CACHE_DIR"
+		download_file || return 1
+		check_shasum || return 1
+		unpack || return 1
+		install_processing || return 1
+		return 0
+
+	fi
+
+
+
 	case "$1" in 
 		-h|--help) usage; return 0;;
 		uninstall) uninstall_processing; return 0;;
+		*) 
+			echo -e "\033[0;31mERRO\033[m $(basename $__script__) parâmetros incorretos."
+			echo 
+			usage
+			return 1
+			;;
 	esac
-
-	is_admin || return 1
-	install_jdk || return 1	
-
-	[[ -d "$INSTALL_DIR" ]] && {
-		echo -e "Processing já instalado em ... $INSTALL_DIR"
-		return 0
-	}
-
-	mkdir -p "$CACHE_DIR"
-	download_file || return 1
-	check_shasum || return 1
-	unpack || return 1
-	install_processing || return 1
-	return 0
+	
 }
-
 
 
 main "$@"
